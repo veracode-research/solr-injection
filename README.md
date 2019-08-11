@@ -21,7 +21,7 @@
 ## Introduction
 This research is aimed to present a new vulnerability: "Solr parameter Injection" and describe how it may be exploited in different scenarios. It also accumulates all public exploits for Apache Solr.
 
-[Apache Solr](http://lucene.apache.org/solr/) is an open source enterprise search platform, written in Java, from the Apache Lucene project. Its major features include full-text search, hit highlighting, faceted search, dynamic clustering, and document parsing.  You may threat it like a database: you run the server, create a collection, and send different types of data to it (such as text, xml documents, pdf documents, pretty any format). Solr automatically index this data and provide a fast but rich REST API interface to search over it. The only protocol to talk to server is HTTP and yes, it's accessible without authentication by default, which makes it a perfect victim for different vulnerabilities.  
+[Apache Solr](http://lucene.apache.org/solr/) is an open source enterprise search platform, written in Java, from the Apache Lucene project. Its major features include full-text search, hit highlighting, faceted search, dynamic clustering, and document parsing.  You may threat it like a database: you run the server, create a collection, and send different types of data to it (such as text, xml documents, pdf documents, pretty any format). Solr automatically index this data and provide a fast but rich REST API interface to search over it. The only protocol to talk to server is HTTP and yes, it's accessible without authentication by default, which makes it a perfect victim for different vulnerabilities. 
 
 ## Solr API quick overview
 When you start a simple server (e.g. by using "./bin/solr start -e dih" command) it creates a web server on port 8983:
@@ -230,7 +230,7 @@ This call ends up to `InitialDirContext.bind(serviceUrl)` and then to `sun.rmi.t
 It allows to perform two types of attacks:
 #### 2.a Attack via deserialization
   A malicious RMI server could respond with arbitrary object that will be deserialized on the Solr side using java's ObjectInputStream, which is considered unsafe. The easies way to create a mock RMI server is probably to use the ['ysoserial.exploit.JRMPListener'](https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/exploit/JRMPListener.java) class form the [ysoserial](https://github.com/frohoff/ysoserial) tool. 
-  Depending on the target classpath, an attacker can use one of the "gadget chains" to trigger Remote Code Execution on the Solr side. One of the known gadget's applicable here is [ROME](https://github.com/artsploit/ysoserial/blob/master/src/main/java/ysoserial/payloads/ROME2.java), since Solr contains "contrib/extraction/lib/rome-1.5.1.jar" library for data extraction, but this library is optional and should be included in the Solr config. Jdk7u21 gadget chain is  also may workchain worth trying is .
+  Depending on the target classpath, an attacker can use one of the "gadget chains" to trigger Remote Code Execution on the Solr side. One of the known gadget's applicable here is [ROME](https://github.com/artsploit/ysoserial/blob/master/src/main/java/ysoserial/payloads/ROME2.java), since Solr contains "contrib/extraction/lib/rome-1.5.1.jar" library for data extraction, but this library is optional and should be included in the Solr config. Jdk7u21 gadget chain is also worth to try to.
 <details>
     <summary>
         <b>[Expand to see steps to reproduce]</b>     

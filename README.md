@@ -326,7 +326,7 @@ Exploit via direct connection to the Solr server:
 </details>
 </p>
 
-When you test it, make sure the url specified in the '<entity>' section is accessible from the Solr side and returns a valid XML document for Xpath evaluation.
+When you test it, make sure the url specified in the 'entity' section is accessible from the Solr side and returns a valid XML document for Xpath evaluation.
 
 Another way to exploit [DataImportHandler](https://cwiki.apache.org/confluence/display/solr/DataImportHandler) is to use dataSource type "JdbcDataSource" along with the driver "com.sun.rowset.JdbcRowSetImpl":
 
@@ -342,6 +342,7 @@ Another way to exploit [DataImportHandler](https://cwiki.apache.org/confluence/d
 </details>
 </p>
 
+In this way we trigger a deserialization attack with the known gadget chain based on the 'com.sun.rowset.JdbcRowSetImpl' class. It requires two setters to be called for 'jndiName' and 'autoCommit' properties and leads us to the vulnerable 'InitialContext.lookup' operation, so we can exploit it as an ordinary JNDI resolution attack.
 See our [Exploiting JNDI Injections](https://www.veracode.com/blog/research/exploiting-jndi-injections-java) article for more information about JNDI attacks. Solr is based on Jetty, hence the Tomcat trick is not applicable here, but you can rely on remote classloading which was fixed for LDAP just quite recently. 
 
 ### 4. \[CVE-2012-6612, CVE-2013-6407, CVE-2013-6408] XXE in the Update Handler

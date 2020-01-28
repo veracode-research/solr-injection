@@ -17,6 +17,7 @@
   * [[CVE-2017-3163] Arbitrary file read via path traversal attack in ReplicationHandler](#6-cve-2017-3163-arbitrary-file-read-via-path-traversal-attack-in-replicationhandler)
   * [[CVE-2019-17558] RCE via Velocity template by @_S00pY](#7-cve-2019-17558-rce-via-velocity-template-by-_s00py)
 * [Black box detection](#black-box-detection)
+* [Mitigations](#mitigations)
 * [Conclusion](#conclusion)
 
 ## Introduction
@@ -433,6 +434,10 @@ GET /xxx?q=aaa%26shards=http://callback_server/solr
 GET /xxx?q=aaa&shards=http://callback_server/solr
 GET /xxx?q={!type=xmlparser v="<!DOCTYPE a SYSTEM 'http://callback_server/solr'><a></a>"}
 ```
+## Mitigations
+The following mitigations can be used to prevent this issue:
+* Make sure that user supplied data is url-encoded when included in a manually-crafted request to Solr. (SolrJ does it automatically.) This should prevent injection of additional parameters using the ```&``` character.
+* Remove curly brackets (```{``` and ```}``` characters) from user controlled data being passed to Solr to avoid local parameter injection.
 
 ## Conclusion
 No matter whether the Solr instance is facing the internet, behind the reverse proxy, or used only by internal web applications, allowing to modify Solr search parameters is a significant security risk.
